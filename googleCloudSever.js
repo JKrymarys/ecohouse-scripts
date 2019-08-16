@@ -71,6 +71,15 @@ function fetchData() {
   return data;
 }
 
+function sendData() {
+  let payload = fetchData();
+  payload = JSON.stringify(payload);
+  console.log(mqttTopic, ": Publishing message:", payload);
+  client.publish(mqttTopic, payload, { qos: 1 });
+  blinkLED(); //give visual feedback that message's been sent (yellow LED)
+  setTimeout(sendData, 10 * 60000); //invoke function recursivly every 10 minutes
+}
+
 const mqttClientId = `projects/${argv.projectId}/locations/${
   argv.cloudRegion
 }/registries/${argv.registryId}/devices/${argv.deviceId}`;
@@ -162,21 +171,12 @@ class MPL3115A2 {
 class DataCollector {
   constructor() {}
 
-  sendData() {
-    let payload = fetchData();
-    payload = JSON.stringify(payload);
-    console.log(mqttTopic, ": Publishing message:", payload);
-    client.publish(mqttTopic, payload, { qos: 1 });
-    blinkLED(); //give visual feedback that message's been sent (yellow LED)
-    setTimeout(this.sendData, 10 * 60000); //invoke function recursivly every 10 minutes
-  }
-
   runDataCollector() {
     client.on("connect", success => {
       if (success) {
         console.log("Client connected...");
         redLED.writeSync(1); // give visual feedback that data collector is connected
-        this.sendData();
+        sendData();
         redLED.writeSync(0); // give visual feedback that data collector has been disconnected
       } else {
         console.log("Client not connected...");
